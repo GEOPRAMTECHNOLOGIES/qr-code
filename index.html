@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Geopram QR Studio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;600;700;800&family=Inconsolata:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #050c1a;
+      --surface:   rgba(8, 20, 42, 0.85);
+      --surface2:  rgba(12, 30, 60, 0.7);
+      --border:    rgba(0, 168, 255, 0.18);
+      --border-hi: rgba(0, 200, 255, 0.55);
+      --accent:    #00c8ff;
+      --accent2:   #0af5b0;
+      --accent-dim:#0090bb;
+      --text:      #e8f4ff;
+      --muted:     #5a88aa;
+      --danger:    #ff4f6d;
+      --glow:      0 0 24px rgba(0,200,255,0.25);
+      --radius:    14px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Oxanium', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 0 0 4rem 0;
+      position: relative;
+      overflow-x: hidden;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    input, textarea, select {
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
+    }
+
+    /* ── Background ── */
+    .bg-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background: url('geopram_background.png') center center / cover no-repeat;
+    }
+    .bg-layer::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,200,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,200,255,0.035) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background: rgba(4, 10, 26, 0.55);
+    }
+
+    /* ── Layout ── */
+    .wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 680px;
+      padding: 0 1.25rem;
+    }
+
+    /* ── Top Nav ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 0 0;
+      margin-bottom: 2rem;
+      animation: fadeDown 0.5s ease both;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #00c8ff 0%, #0af5b0 100%);
+    }
+    .brand-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 8px;
+    }
+    .brand-name {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text);
+      line-height: 1.1;
+    }
+    .brand-name small {
+      display: block;
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 300;
+      letter-spacing: 0.15em;
+      font-family: 'Inconsolata', monospace;
+    }
+    .nav-badge {
+      font-family: 'Inconsolata', monospace;
+      font-size: 10px;
+      color: var(--accent);
+      border: 1px solid var(--border-hi);
+      padding: 4px 10px;
+      border-radius: 100px;
+      letter-spacing: 0.1em;
+      background: rgba(0,200,255,0.07);
+    }
+
+    /* ── Header ── */
+    .hero {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+    h1 {
+      font-size: clamp(2.2rem, 7vw, 3.6rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    h1 .hl {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-family: 'Inconsolata', monospace;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 5px;
+      margin-bottom: 1.75rem;
+      animation: fadeUp 0.6s 0.15s ease both;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Oxanium', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(0,200,255,0.18) 0%, rgba(10,245,176,0.1) 100%);
+      color: var(--accent);
+      border: 1px solid var(--border-hi);
+      box-shadow: var(--glow);
+    }
+    .tab-btn:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.04); }
+
+    /* ── Panel ── */
+    .panel { display: none; animation: fadeUp 0.3s ease both; }
+    .panel.active { display: block; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      animation: fadeUp 0.6s 0.2s ease both;
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── Input ── */
+    .field-label {
+      font-family: 'Inconsolata', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+      display: block;
+    }
+    .input-row { display: flex; gap: 10px; }
+    input[type="text"], select, textarea {
+      background: rgba(0,20,50,0.5);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-family: 'Inconsolata', monospace;
+      font-size: 13px;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    input[type="text"]:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,200,255,0.12);
+    }
+    input[type="text"]::placeholder, textarea::placeholder { color: #2a4a6a; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      color: #050c1a;
+      border: none;
+      border-radius: 9px;
+      font-family: 'Oxanium', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 11px 22px;
+      cursor: pointer;
+      white-space: nowrap;
+      letter-spacing: 0.05em;
+      transition: opacity 0.15s, transform 0.1s;
+      flex-shrink: 0;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:active { transform: scale(0.97); }
+
+    .error-msg {
+      font-family: 'Inconsolata', monospace;
+      font-size: 11px;
+      color: var(--danger);
+      margin-top: 6px;
+      display: none;
+    }
+
+    /* ── Options grid ── */
+    .opts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 1.25rem;
+    }
+    @media(max-width: 420px) { .opts-grid { grid-template-columns: 1fr; } }
+
+    select {
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .range-row { display: flex; align-items: center; gap: 8px; }
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .range-val {
+      font-family: 'Inconsolata', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      min-width: 38px;
+      text-align: right;
+    }
+
+    /* ── Colors ── */
+    .color-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 1.25rem;
+    }
+    @media(max-width: 420px) { .color-grid { grid-template-columns: 1fr; } }
+    .color-pick {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(0,20,50,0.5);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .color-pick:hover { border-color: var(--border-hi); }
+    input[type="color"] {
+      width: 24px; height: 24px;
+      border: none; border-radius: 5px;
+      cursor: pointer; padding: 0; background: none;
+    }
+    .color-pick-label {
+      font-family: 'Inconsolata', monospace;
+      font-size: 11px; color: var(--muted);
+    }
+
+    /* Watermark toggle */
+    .toggle-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 1.25rem;
+      padding: 10px 14px;
+      background: rgba(0,200,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle-row:hover { border-color: var(--border-hi); }
+    .toggle {
+      width: 38px; height: 20px;
+      background: var(--border);
+      border-radius: 100px;
+      position: relative;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      background: #fff; border-radius: 50%;
+      top: 3px; left: 3px;
+      transition: transform 0.2s;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle.on::after { transform: translateX(18px); }
+    .toggle-label {
+      font-size: 12px; color: var(--muted);
+      font-family: 'Inconsolata', monospace;
+      flex: 1;
+    }
+    .toggle-label strong { color: var(--accent); font-weight: 500; }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px; background: var(--border);
+      margin: 1.5rem 0; display: none;
+    }
+
+    /* ── QR Output ── */
+    .qr-output { display: none; flex-direction: column; align-items: center; gap: 1.25rem; }
+    .qr-output.visible { display: flex; }
+
+    .qr-frame {
+      position: relative;
+      background: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 0 40px rgba(0,200,255,0.2);
+    }
+    .qr-frame::before, .qr-frame::after {
+      content: '';
+      position: absolute;
+      width: 22px; height: 22px;
+      border-color: var(--accent);
+      border-style: solid;
+    }
+    .qr-frame::before { top:-5px; left:-5px; border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
+    .qr-frame::after  { bottom:-5px; right:-5px; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
+
+    #qrcode canvas, #qrcode img { display: block; border-radius: 4px; }
+
+    .qr-url {
+      font-family: 'Inconsolata', monospace;
+      font-size: 11px; color: var(--muted);
+      text-align: center; word-break: break-all;
+      max-width: 320px; line-height: 1.6;
+    }
+    .qr-url a { color: var(--accent); text-decoration: none; }
+
+    .action-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .btn-ghost {
+      background: rgba(0,200,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-family: 'Oxanium', sans-serif;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 9px 16px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      transition: all 0.2s;
+      letter-spacing: 0.03em;
+    }
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0,200,255,0.1);
+    }
+    .btn-ghost:active { transform: scale(0.97); }
+
+    /* ── QR Type Tabs ── */
+    .qr-type-row {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+    .type-chip {
+      font-family: 'Inconsolata', monospace;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      background: transparent;
+      transition: all 0.2s;
+      letter-spacing: 0.06em;
+    }
+    .type-chip.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0,200,255,0.1);
+    }
+    .type-chip:hover:not(.active) { border-color: var(--muted); color: var(--text); }
+
+    /* ── QR Preset inputs (WiFi, vCard etc) ── */
+    .preset-form { display: none; flex-direction: column; gap: 10px; margin-bottom: 1.25rem; }
+    .preset-form.active { display: flex; }
+    .preset-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media(max-width: 440px) { .preset-row { grid-template-columns: 1fr; } }
+
+    /* ── Scan Panel ── */
+    .scan-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      text-align: center;
+    }
+    .scan-modes {
+      display: flex; gap: 6px;
+      margin-bottom: 1.5rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+    }
+    .scan-mode-btn {
+      flex: 1; padding: 9px;
+      border-radius: 7px; border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Oxanium', sans-serif;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      letter-spacing: 0.04em;
+    }
+    .scan-mode-btn.active {
+      background: rgba(0,200,255,0.15);
+      color: var(--accent);
+      border: 1px solid var(--border-hi);
+    }
+
+    #cameraView {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    #cameraView.active { display: flex; }
+
+    .video-wrapper {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid var(--border-hi);
+      box-shadow: var(--glow);
+      width: 100%;
+      max-width: 400px;
+    }
+    #videoEl {
+      width: 100%;
+      display: block;
+      border-radius: 10px;
+    }
+    #scanCanvas { display: none; }
+
+    .scan-line {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scanMove 2s ease-in-out infinite;
+      z-index: 5;
+    }
+    @keyframes scanMove {
+      0% { top: 5%; }
+      50% { top: 90%; }
+      100% { top: 5%; }
+    }
+
+    .scan-corners {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .scan-corners::before, .scan-corners::after {
+      content: '';
+      position: absolute;
+      width: 28px; height: 28px;
+      border-color: var(--accent);
+      border-style: solid;
+    }
+    .scan-corners::before { top:8px; left:8px; border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
+    .scan-corners::after  { bottom:8px; right:8px; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
+
+    #imageUploadView {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    #imageUploadView.active { display: flex; width: 100%; }
+
+    .drop-zone {
+      width: 100%;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 2.5rem 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(0,200,255,0.05);
+    }
+    .drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .drop-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .drop-text { font-family: 'Inconsolata', monospace; font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+    #scanPreviewImg {
+      max-width: 100%; max-height: 260px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      display: none;
+    }
+
+    .scan-result {
+      display: none;
+      width: 100%;
+      background: rgba(10,245,176,0.06);
+      border: 1px solid rgba(10,245,176,0.3);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      text-align: left;
+      animation: fadeUp 0.3s ease both;
+    }
+    .scan-result.visible { display: block; }
+    .scan-result-label {
+      font-family: 'Inconsolata', monospace;
+      font-size: 10px; color: var(--accent2);
+      letter-spacing: 0.12em; text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .scan-result-text {
+      font-family: 'Inconsolata', monospace;
+      font-size: 13px; color: var(--text);
+      word-break: break-all; line-height: 1.6;
+    }
+    .scan-result-actions {
+      display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+    }
+
+    .scan-err {
+      display: none;
+      font-family: 'Inconsolata', monospace;
+      font-size: 12px; color: var(--danger);
+      padding: 10px 14px;
+      background: rgba(255,79,109,0.08);
+      border: 1px solid rgba(255,79,109,0.25);
+      border-radius: 8px;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* ── History ── */
+    .history-section {
+      margin-top: 1rem;
+      animation: fadeUp 0.6s 0.25s ease both;
+      display: none;
+    }
+    .section-title {
+      font-family: 'Inconsolata', monospace;
+      font-size: 10px; color: var(--muted);
+      letter-spacing: 0.14em; text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .history-list { display: flex; flex-direction: column; gap: 6px; }
+    .history-item {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .history-item:hover { border-color: var(--border-hi); }
+    .h-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
+    .h-url {
+      font-family: 'Inconsolata', monospace;
+      font-size: 12px; color: var(--muted);
+      flex: 1; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .h-icon { font-size: 13px; color: #2a4a6a; transition: color 0.2s; }
+    .history-item:hover .h-icon { color: var(--accent); }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 2.5rem;
+      text-align: center;
+      font-family: 'Inconsolata', monospace;
+      font-size: 11px;
+      color: #2a4a6a;
+      line-height: 1.8;
+      animation: fadeUp 0.6s 0.3s ease both;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+
+    /* ── Animations ── */
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes popIn    { 0% { opacity:0; transform:scale(0.82); } 70% { transform:scale(1.05); } 100% { opacity:1; transform:scale(1); } }
+    .pop { animation: popIn 0.38s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+    /* ── Responsive ── */
+    @media(max-width: 520px) {
+      .card, .scan-card { padding: 1.25rem; }
+      .input-row { flex-direction: column; }
+      .btn-primary { width: 100%; }
+      h1 { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-layer"></div>
+<div class="bg-overlay"></div>
+
+<div class="wrap">
+
+  <!-- Nav -->
+  <nav>
+    <div class="brand">
+      <div class="brand-logo">
+        <img src="geopram_logo.png" alt="Geopram logo"/>
+      </div>
+      <div class="brand-name">
+        Geopram
+        <small>QR Studio</small>
+      </div>
+    </div>
+    <div class="nav-badge">v2.0 · Free</div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>QR <span class="hl">Studio</span></h1>
+    <p class="hero-sub">// Generate · Customize · Scan · Download</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('generate',this)">
+      ⬡ Generate
+    </button>
+    <button class="tab-btn" onclick="switchTab('scan',this)">
+      ⬡ Scan
+    </button>
+  </div>
+
+  <!-- GENERATE PANEL -->
+  <div id="panelGenerate" class="panel active">
+
+    <div class="card">
+
+      <!-- QR Type -->
+      <span class="field-label">QR Content Type</span>
+      <div class="qr-type-row">
+        <button class="type-chip active" onclick="setType('url',this)">URL</button>
+        <button class="type-chip" onclick="setType('text',this)">Text</button>
+        <button class="type-chip" onclick="setType('wifi',this)">WiFi</button>
+        <button class="type-chip" onclick="setType('vcard',this)">vCard</button>
+        <button class="type-chip" onclick="setType('email',this)">Email</button>
+        <button class="type-chip" onclick="setType('sms',this)">SMS</button>
+      </div>
+
+      <!-- URL -->
+      <div class="preset-form active" id="form-url">
+        <span class="field-label">URL / Link</span>
+        <div class="input-row">
+          <input type="text" id="urlInput" placeholder="https://geopram.com"/>
+          <button class="btn-primary" onclick="generate()">Generate ↗</button>
+        </div>
+        <p class="error-msg" id="errMsg">⚠ Enter a valid URL (https://...)</p>
+      </div>
+
+      <!-- Text -->
+      <div class="preset-form" id="form-text">
+        <span class="field-label">Plain Text</span>
+        <textarea id="textInput" rows="3" placeholder="Enter any text…" style="resize:vertical;"></textarea>
+        <button class="btn-primary" onclick="generateFromType()">Generate ↗</button>
+      </div>
+
+      <!-- WiFi -->
+      <div class="preset-form" id="form-wifi">
+        <span class="field-label">WiFi Network</span>
+        <div class="preset-row">
+          <div>
+            <span class="field-label">SSID (Network Name)</span>
+            <input type="text" id="wifiSSID" placeholder="MyNetwork"/>
+          </div>
+          <div>
+            <span class="field-label">Password</span>
+            <input type="text" id="wifiPass" placeholder="password"/>
+          </div>
+        </div>
+        <div>
+          <span class="field-label">Security</span>
+          <select id="wifiSec">
+            <option value="WPA">WPA/WPA2</option>
+            <option value="WEP">WEP</option>
+            <option value="nopass">None</option>
+          </select>
+        </div>
+        <button class="btn-primary" onclick="generateFromType()">Generate ↗</button>
+      </div>
+
+      <!-- vCard -->
+      <div class="preset-form" id="form-vcard">
+        <span class="field-label">Contact Card</span>
+        <div class="preset-row">
+          <div><span class="field-label">Full Name</span><input type="text" id="vcName" placeholder="John Doe"/></div>
+          <div><span class="field-label">Phone</span><input type="text" id="vcPhone" placeholder="+254700000000"/></div>
+        </div>
+        <div class="preset-row">
+          <div><span class="field-label">Email</span><input type="text" id="vcEmail" placeholder="john@example.com"/></div>
+          <div><span class="field-label">Company</span><input type="text" id="vcOrg" placeholder="Geopram Ltd"/></div>
+        </div>
+        <div><span class="field-label">Website</span><input type="text" id="vcUrl" placeholder="https://example.com"/></div>
+        <button class="btn-primary" onclick="generateFromType()">Generate ↗</button>
+      </div>
+
+      <!-- Email -->
+      <div class="preset-form" id="form-email">
+        <span class="field-label">Email</span>
+        <div><span class="field-label">To</span><input type="text" id="emailTo" placeholder="someone@example.com"/></div>
+        <div><span class="field-label">Subject</span><input type="text" id="emailSubj" placeholder="Hello!"/></div>
+        <div><span class="field-label">Body</span><textarea id="emailBody" rows="2" placeholder="Email body…" style="resize:vertical;"></textarea></div>
+        <button class="btn-primary" onclick="generateFromType()">Generate ↗</button>
+      </div>
+
+      <!-- SMS -->
+      <div class="preset-form" id="form-sms">
+        <span class="field-label">SMS</span>
+        <div><span class="field-label">Phone Number</span><input type="text" id="smsPhone" placeholder="+254700000000"/></div>
+        <div><span class="field-label">Message</span><textarea id="smsMsg" rows="2" placeholder="Message…" style="resize:vertical;"></textarea></div>
+        <button class="btn-primary" onclick="generateFromType()">Generate ↗</button>
+      </div>
+
+      <!-- Options -->
+      <div class="opts-grid">
+        <div>
+          <span class="field-label">Error Correction</span>
+          <select id="ecLevel">
+            <option value="L">Low (L)</option>
+            <option value="M" selected>Medium (M)</option>
+            <option value="H">High (H)</option>
+          </select>
+        </div>
+        <div>
+          <span class="field-label">Size — <span id="sizeVal">256</span>px</span>
+          <div class="range-row">
+            <input type="range" id="sizeSlider" min="128" max="512" step="16" value="256"
+              oninput="document.getElementById('sizeVal').textContent=this.value"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Colors -->
+      <div class="color-grid">
+        <div>
+          <span class="field-label">QR Color</span>
+          <div class="color-pick">
+            <input type="color" id="darkColor" value="#000000"/>
+            <span class="color-pick-label">Foreground</span>
+          </div>
+        </div>
+        <div>
+          <span class="field-label">Background Color</span>
+          <div class="color-pick">
+            <input type="color" id="lightColor" value="#ffffff"/>
+            <span class="color-pick-label">Background</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Watermark premium notice -->
+      <div class="toggle-row premium" onclick="showPremiumWatermarkNotice()" title="Premium remove watermark coming soon">
+        <div class="toggle on" id="wmToggle"></div>
+        <span class="toggle-label">Premium remove watermark (payment integration in development)</span>
+      </div>
+
+      <!-- Divider + Output -->
+      <div class="divider" id="divider"></div>
+      <div class="qr-output" id="qrOutput">
+        <div class="qr-frame">
+          <div id="qrcode"></div>
+        </div>
+        <p class="qr-url" id="qrUrl"></p>
+        <div class="action-row">
+          <button class="btn-ghost" onclick="downloadQR()">↓ PNG</button>
+          <button class="btn-ghost" onclick="downloadSVG()">↓ SVG</button>
+          <button class="btn-ghost" onclick="copyUrl(this)">⧉ Copy URL</button>
+          <button class="btn-ghost" onclick="shareQR()">⬡ Share</button>
+        </div>
+      </div>
+
+    </div><!-- /card -->
+
+    <!-- History -->
+    <div class="history-section" id="historySection">
+      <p class="section-title">Recent</p>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+  </div><!-- /panelGenerate -->
+
+  <!-- SCAN PANEL -->
+  <div id="panelScan" class="panel">
+    <div class="scan-card">
+
+      <div class="scan-modes">
+        <button class="scan-mode-btn active" onclick="setScanMode('camera',this)">📷 Camera</button>
+        <button class="scan-mode-btn" onclick="setScanMode('upload',this)">📁 Upload Image</button>
+      </div>
+
+      <!-- Camera -->
+      <div id="cameraView">
+        <div class="video-wrapper">
+          <video id="videoEl" playsinline autoplay muted></video>
+          <canvas id="scanCanvas"></canvas>
+          <div class="scan-line"></div>
+          <div class="scan-corners"></div>
+        </div>
+        <button class="btn-primary" id="cameraBtn" onclick="toggleCamera()">Start Camera</button>
+        <p style="font-family:'Inconsolata',monospace;font-size:11px;color:var(--muted);">
+          Point camera at a QR code — auto-detects instantly
+        </p>
+      </div>
+
+      <!-- Upload -->
+      <div id="imageUploadView">
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept="image/*" onchange="handleFileInput(this)"/>
+          <div class="drop-icon">⬡</div>
+          <p class="drop-text">Drop an image here or click to browse<br>PNG, JPG, GIF, WEBP supported</p>
+        </div>
+        <img id="scanPreviewImg" alt="preview"/>
+        <button class="btn-primary" id="scanFileBtn" onclick="scanUploadedImage()" style="display:none;">
+          Scan QR Code ↗
+        </button>
+      </div>
+
+      <div class="scan-err" id="scanErr"></div>
+
+      <!-- Result -->
+      <div class="scan-result" id="scanResult">
+        <p class="scan-result-label">✓ QR Code Detected</p>
+        <p class="scan-result-text" id="scanResultText"></p>
+        <div class="scan-result-actions">
+          <button class="btn-ghost" onclick="copyScanResult(this)">⧉ Copy</button>
+          <button class="btn-ghost" id="openUrlBtn" onclick="openScanUrl()" style="display:none;">⬡ Open Link</button>
+          <button class="btn-ghost" onclick="generateFromScan()">⬡ Generate New QR</button>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /panelScan -->
+
+  <footer>
+    &copy; 2025 <strong style="color:var(--muted);">Geopram Technologies</strong><br>
+    Built by <a href="mailto:celestakim018@gmail.com">Joram Kimathi</a> · 
+    <a href="mailto:celestakim018@gmail.com">celestakim018@gmail.com</a><br>
+    100% local · No data transmitted · No server required
+  </footer>
+
+</div><!-- /wrap -->
+
+<script>
+  /* ===================== STATE ===================== */
+  let qrObj = null;
+  let history = [];
+  let currentType = 'url';
+  let watermarkOn = true;
+  let cameraStream = null;
+  let scanLoop = null;
+
+  /* ===================== TABS ===================== */
+  function switchTab(name, el) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+    if (name !== 'scan') stopCamera();
+  }
+
+  /* ===================== QR TYPE ===================== */
+  function setType(t, el) {
+    currentType = t;
+    document.querySelectorAll('.type-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.preset-form').forEach(f => f.classList.remove('active'));
+    document.getElementById('form-' + t).classList.add('active');
+  }
+
+  function buildContent() {
+    switch (currentType) {
+      case 'url':   return document.getElementById('urlInput').value.trim();
+      case 'text':  return document.getElementById('textInput').value.trim();
+      case 'wifi': {
+        const s = document.getElementById('wifiSSID').value.trim();
+        const p = document.getElementById('wifiPass').value.trim();
+        const sec = document.getElementById('wifiSec').value;
+        if (!s) return null;
+        return `WIFI:T:${sec};S:${s};P:${p};;`;
+      }
+      case 'vcard': {
+        const n = document.getElementById('vcName').value.trim();
+        if (!n) return null;
+        const ph = document.getElementById('vcPhone').value.trim();
+        const em = document.getElementById('vcEmail').value.trim();
+        const org = document.getElementById('vcOrg').value.trim();
+        const url = document.getElementById('vcUrl').value.trim();
+        return `BEGIN:VCARD\nVERSION:3.0\nFN:${n}\nTEL:${ph}\nEMAIL:${em}\nORG:${org}\nURL:${url}\nEND:VCARD`;
+      }
+      case 'email': {
+        const to = document.getElementById('emailTo').value.trim();
+        if (!to) return null;
+        const subj = encodeURIComponent(document.getElementById('emailSubj').value.trim());
+        const body = encodeURIComponent(document.getElementById('emailBody').value.trim());
+        return `mailto:${to}?subject=${subj}&body=${body}`;
+      }
+      case 'sms': {
+        const ph = document.getElementById('smsPhone').value.trim();
+        if (!ph) return null;
+        const msg = encodeURIComponent(document.getElementById('smsMsg').value.trim());
+        return `sms:${ph}?body=${msg}`;
+      }
+    }
+    return null;
+  }
+
+  function generateFromType() {
+    const content = buildContent();
+    if (!content) { alert('Please fill in the required fields.'); return; }
+    renderQR(content);
+    if (currentType === 'url') addHistory(content);
+  }
+
+  /* ===================== GENERATE ===================== */
+  function generate() {
+    const input = document.getElementById('urlInput').value.trim();
+    const err = document.getElementById('errMsg');
+    if (!input.match(/^https?:\/\/.+/)) { err.style.display = 'block'; return; }
+    err.style.display = 'none';
+    renderQR(input);
+    addHistory(input);
+  }
+
+  function renderQR(content) {
+    const size  = parseInt(document.getElementById('sizeSlider').value);
+    const dark  = document.getElementById('darkColor').value;
+    const light = document.getElementById('lightColor').value;
+    const ec    = document.getElementById('ecLevel').value;
+
+    const container = document.getElementById('qrcode');
+    container.innerHTML = '';
+    if (qrObj) { try { qrObj.clear(); } catch(e){} }
+
+    qrObj = new QRCode(container, {
+      text: content, width: size, height: size,
+      colorDark: dark, colorLight: light,
+      correctLevel: QRCode.CorrectLevel[ec]
+    });
+
+    setTimeout(() => applyWatermark(size), 200);
+
+    document.getElementById('divider').style.display = 'block';
+    const out = document.getElementById('qrOutput');
+    out.classList.add('visible');
+    container.classList.remove('pop');
+    void container.offsetWidth;
+    container.classList.add('pop');
+
+    document.getElementById('qrUrl').innerHTML =
+      content.startsWith('http')
+        ? `<a href="${content}" target="_blank" rel="noopener">${content}</a>`
+        : content.length > 80 ? content.substring(0,80)+'…' : content;
+  }
+
+  function applyWatermark(size) {
+    const canvas = document.querySelector('#qrcode canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const logoImg = new Image();
+    logoImg.onload = () => {
+      const logoSize = size * 0.72;
+      ctx.save();
+      ctx.globalAlpha = 0.08;
+      ctx.drawImage(logoImg, (size - logoSize) / 2, (size - logoSize) / 2, logoSize, logoSize);
+      ctx.restore();
+
+      ctx.save();
+      ctx.globalAlpha = 0.30;
+      ctx.fillStyle = '#00c8ff';
+      ctx.font = `bold ${Math.max(18, Math.round(size * 0.070))}px Oxanium, sans-serif`;
+      ctx.textAlign = 'right';
+      ctx.fillText('Geopram', size - 10, size - 10);
+      ctx.restore();
+    };
+    logoImg.onerror = () => {
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = '#00c8ff';
+      ctx.font = `bold ${Math.max(18, Math.round(size * 0.070))}px Oxanium, sans-serif`;
+      ctx.textAlign = 'right';
+      ctx.fillText('Geopram', size - 10, size - 10);
+      ctx.restore();
+    };
+    logoImg.src = 'geopram_logo.png';
+  }
+
+  /* ===================== WATERMARK ===================== */
+  function showPremiumWatermarkNotice() {
+    alert('Remove watermark is a premium feature under development. QR codes always include the watermark for now.');
+  }
+
+  /* ===================== DOWNLOAD ===================== */
+  function downloadQR() {
+    const canvas = document.querySelector('#qrcode canvas');
+    if (!canvas) return;
+    const a = document.createElement('a');
+    a.download = 'geopram-qrcode.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  }
+
+  function downloadSVG() {
+    const canvas = document.querySelector('#qrcode canvas');
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    const size = canvas.width;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+      <image href="${dataUrl}" width="${size}" height="${size}"/>
+    </svg>`;
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const a = document.createElement('a');
+    a.download = 'geopram-qrcode.svg';
+    a.href = URL.createObjectURL(blob);
+    a.click();
+  }
+
+  function copyUrl(btn) {
+    const content = buildContent() || document.getElementById('urlInput').value.trim();
+    if (!content) return;
+    navigator.clipboard.writeText(content).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ Copied!';
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.color = 'var(--accent)';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.borderColor = ''; btn.style.color = ''; }, 1800);
+    });
+  }
+
+  function shareQR() {
+    const content = buildContent() || '';
+    if (navigator.share) {
+      navigator.share({ title: 'QR Code by Geopram', text: content }).catch(() => {});
+    } else {
+      copyUrl({ innerHTML:'', style:{} });
+    }
+  }
+
+  /* ===================== HISTORY ===================== */
+  function addHistory(url) {
+    history = [url, ...history.filter(u => u !== url)].slice(0, 6);
+    const section = document.getElementById('historySection');
+    const list = document.getElementById('historyList');
+    section.style.display = history.length ? 'block' : 'none';
+    list.innerHTML = history.map(u =>
+      `<div class="history-item" onclick="loadHistory('${u.replace(/'/g,"\\'")}')">
+        <div class="h-dot"></div>
+        <span class="h-url">${u}</span>
+        <span class="h-icon">↺</span>
+      </div>`
+    ).join('');
+  }
+
+  function loadHistory(url) {
+    document.getElementById('urlInput').value = url;
+    setType('url', document.querySelector('[onclick="setType(\'url\',this)"]'));
+    generate();
+  }
+
+  document.getElementById('urlInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') generate();
+  });
+
+  /* ===================== SCAN — MODE ===================== */
+  function setScanMode(mode, el) {
+    document.querySelectorAll('.scan-mode-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    clearScanResult();
+    if (mode === 'camera') {
+      document.getElementById('cameraView').classList.add('active');
+      document.getElementById('imageUploadView').classList.remove('active');
+    } else {
+      stopCamera();
+      document.getElementById('cameraView').classList.remove('active');
+      document.getElementById('imageUploadView').classList.add('active');
+    }
+  }
+
+  /* ===================== SCAN — CAMERA ===================== */
+  function toggleCamera() {
+    if (cameraStream) { stopCamera(); return; }
+    startCamera();
+  }
+
+  function startCamera() {
+    const btn = document.getElementById('cameraBtn');
+    clearScanResult();
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showScanErr('Camera not supported on this device/browser.');
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => {
+        cameraStream = stream;
+        const video = document.getElementById('videoEl');
+        video.srcObject = stream;
+        video.play();
+        btn.textContent = 'Stop Camera';
+        btn.style.background = 'linear-gradient(135deg,#ff4f6d,#ff8a65)';
+        scanLoop = setInterval(() => scanFrameFromCamera(), 300);
+      })
+      .catch(err => showScanErr('Camera access denied: ' + err.message));
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
+    }
+    clearInterval(scanLoop);
+    scanLoop = null;
+    const btn = document.getElementById('cameraBtn');
+    btn.textContent = 'Start Camera';
+    btn.style.background = '';
+    const video = document.getElementById('videoEl');
+    video.srcObject = null;
+  }
+
+  function scanFrameFromCamera() {
+    const video = document.getElementById('videoEl');
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    const canvas = document.getElementById('scanCanvas');
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+    if (code) {
+      stopCamera();
+      showScanResult(code.data);
+    }
+  }
+
+  /* ===================== SCAN — FILE UPLOAD ===================== */
+  let uploadedFile = null;
+
+  function handleFileInput(input) {
+    const file = input.files[0];
+    if (!file) return;
+    uploadedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById('scanPreviewImg');
+      img.src = e.target.result;
+      img.style.display = 'block';
+      document.getElementById('scanFileBtn').style.display = 'inline-flex';
+      clearScanResult();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const dropZone = document.getElementById('dropZone');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      uploadedFile = file;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = document.getElementById('scanPreviewImg');
+        img.src = ev.target.result;
+        img.style.display = 'block';
+        document.getElementById('scanFileBtn').style.display = 'inline-flex';
+        clearScanResult();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  function scanUploadedImage() {
+    clearScanResult();
+    const img = document.getElementById('scanPreviewImg');
+    if (!img.src) return;
+    const canvas = document.createElement('canvas');
+    const tempImg = new Image();
+    tempImg.onload = () => {
+      canvas.width  = tempImg.naturalWidth;
+      canvas.height = tempImg.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(tempImg, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+      if (code) {
+        showScanResult(code.data);
+      } else {
+        showScanErr('No QR code found in this image. Try a clearer photo.');
+      }
+    };
+    tempImg.src = img.src;
+  }
+
+  /* ===================== SCAN — RESULT ===================== */
+  function showScanResult(data) {
+    document.getElementById('scanErr').style.display = 'none';
+    document.getElementById('scanResultText').textContent = data;
+    const openBtn = document.getElementById('openUrlBtn');
+    if (data.match(/^https?:\/\/.+/)) {
+      openBtn.style.display = 'inline-flex';
+    } else {
+      openBtn.style.display = 'none';
+    }
+    document.getElementById('scanResult').classList.add('visible');
+  }
+
+  function clearScanResult() {
+    document.getElementById('scanResult').classList.remove('visible');
+    document.getElementById('scanErr').style.display = 'none';
+  }
+
+  function showScanErr(msg) {
+    const el = document.getElementById('scanErr');
+    el.textContent = '⚠ ' + msg;
+    el.style.display = 'block';
+  }
+
+  function copyScanResult(btn) {
+    const text = document.getElementById('scanResultText').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ Copied!';
+      setTimeout(() => { btn.innerHTML = orig; }, 1800);
+    });
+  }
+
+  function openScanUrl() {
+    const url = document.getElementById('scanResultText').textContent;
+    window.open(url, '_blank', 'noopener');
+  }
+
+  function generateFromScan() {
+    const text = document.getElementById('scanResultText').textContent;
+    if (!text) return;
+    switchTab('generate', document.querySelector('[onclick="switchTab(\'generate\',this)"]'));
+    if (text.match(/^https?:\/\/.+/)) {
+      setType('url', document.querySelector('[onclick="setType(\'url\',this)"]'));
+      document.getElementById('urlInput').value = text;
+      generate();
+    } else {
+      setType('text', document.querySelector('[onclick="setType(\'text\',this)"]'));
+      document.getElementById('textInput').value = text;
+      generateFromType();
+    }
+  }
+
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('copy', e => e.preventDefault());
+  document.addEventListener('mousedown', e => {
+    if (e.button === 2) e.preventDefault();
+  });
+  document.addEventListener('keydown', e => {
+    const key = e.key.toUpperCase();
+    if (
+      key === 'F12' ||
+      key === 'CONTEXTMENU' ||
+      (e.ctrlKey && ['U','S','A','C','I','J'].includes(key)) ||
+      (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(key)) ||
+      (e.metaKey && e.shiftKey && ['I','J','C'].includes(key)) ||
+      (e.metaKey && key === 'U')
+    ) {
+      e.preventDefault();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopCamera();
+  });
+
+  document.getElementById('cameraView').classList.add('active');
+  document.getElementById('wmToggle').classList.add('on');
+</script>
+</body>
+</html>
